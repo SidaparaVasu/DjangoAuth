@@ -114,3 +114,49 @@ class OTPTest(TestCase):
 
         with self.assertRaises(OTPInvalidException):
             self.service.verify_otp(self.user, "123456", OTPPurpose.LOGIN)
+
+    # ------------------------------------------------------------------
+    # Implicit Verification Tests
+    # ------------------------------------------------------------------
+
+    def test_implicit_verification_on_any_otp_success(self):
+        """Verifying a PASSWORD_RESET OTP should mark email as verified."""
+        # Setup: Ensure user is NOT verified
+        self.user.is_email_verified = False
+        self.user.save()
+
+        from apps.core_system.models import FeatureFlag
+        FeatureFlag.objects.create(feature_key="password_reset_via_otp", is_enabled=True)
+
+        self.service.send_otp(self.user, OTPPurpose.PASSWORD_RESET)
+        otp_record = AuthOTPVerification.objects.get(user=self.user, purpose=OTPPurpose.PASSWORD_RESET)
+
+        # Verify
+        self.service.verify_otp(self.user, otp_record.otp_code, OTPPurpose.PASSWORD_RESET)
+
+        # Assert
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_email_verified)
+        self.assertIsNotNone(self.user.email_verified_at)
+
+    def test_already_verified_user_stays_verified(self):
+        """OTP verification shouldn't disrupt an already verified user."""
+        from django.utils import timezone
+        fixed_time = timezone.now() - timedelta(days=1)
+        
+        self.user.is_email_verified = True
+        self.user.email_verified_at = fixed_time
+        self.user.save()
+
+        from apps.core_system.models import FeatureFlag
+        FeatureFlag.objects.create(feature_key="otp_login", is_enabled=True)
+
+        self.service.send_otp(self.user, OTPPurpose.LOGIN)
+        otp_record = AuthOTPVerification.objects.get(user=self.user, purpose=OTPPurpose.LOGIN)
+
+        self.service.verify_otp(self.user, otp_record.otp_code, OTPPurpose.LOGIN)
+
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_email_verified)
+        self.assertEqual(self.user.email_verified_at, fixed_time)
+
