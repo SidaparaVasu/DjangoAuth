@@ -290,10 +290,6 @@ class AuthService:
         self.lock_service.record_attempt(identifier, ip, AttemptStatus.SUCCESS)
         self.user_repo.update_last_login(user)
 
-        # Automatically mark the email as verified since they proven ownership
-        if not user.is_email_verified:
-            self.user_repo.mark_email_verified(user)
-
         # Issue JWT + create session
         access_token, refresh_token, session_key = self.session_service.create_session(
             user=user, ip_address=ip, user_agent=user_agent
