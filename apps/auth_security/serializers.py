@@ -110,6 +110,23 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 
 # ---------------------------------------------------------------------------
+# OTP Login Flow
+# ---------------------------------------------------------------------------
+
+class OTPLoginRequestSerializer(serializers.Serializer):
+    """Step 1: Request an OTP for passwordless login."""
+    identifier = serializers.CharField(
+        help_text="Login using either email address or username.",
+    )
+
+
+class OTPLoginConfirmSerializer(serializers.Serializer):
+    """Step 2: Confirm passwordless login with OTP."""
+    identifier = serializers.CharField()
+    otp_code = serializers.CharField(max_length=10)
+
+
+# ---------------------------------------------------------------------------
 # Sessions
 # ---------------------------------------------------------------------------
 

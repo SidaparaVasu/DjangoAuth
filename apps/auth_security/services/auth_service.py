@@ -244,6 +244,72 @@ class AuthService:
             "user": user,
         }
 
+    def otp_login(
+        self,
+        identifier: str,
+        otp_code: str,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> dict:
+        """
+        Authenticate a user via a one-time password and issue JWT tokens.
+        """
+        ip = ip_address or ""
+
+        user = self.user_repo.get_by_identifier(identifier)
+
+        # Check account lock early
+        if user:
+            lock = self.lock_service.check_lock(user)
+            if lock:
+                self.lock_service.record_attempt(identifier, ip, AttemptStatus.FAILED)
+                raise AccountLockedException(
+                    f"Your account is temporarily locked. Try again after "
+                    f"{lock.locked_until.strftime('%H:%M UTC')}."
+                )
+
+        if user and not user.is_active:
+            self.lock_service.record_attempt(identifier, ip, AttemptStatus.FAILED)
+            raise InvalidCredentialsException("Invalid credentials.")
+
+        if not user:
+            self.lock_service.record_attempt(identifier, ip, AttemptStatus.FAILED)
+            raise InvalidCredentialsException("Invalid credentials.")
+
+        # Verify the OTP via standard OTPService
+        try:
+            from apps.auth_security.services.otp_service import OTPService
+            from apps.auth_security.constants import OTPPurpose
+            OTPService().verify_otp(user=user, otp_code=otp_code, purpose=OTPPurpose.LOGIN)
+        except Exception:
+            self.lock_service.record_attempt(identifier, ip, AttemptStatus.FAILED)
+            self.lock_service.check_and_lock(user, identifier, ip)
+            raise InvalidCredentialsException("Invalid credentials.")
+
+        # --- OTP valid from here ---
+        self.lock_service.record_attempt(identifier, ip, AttemptStatus.SUCCESS)
+        self.user_repo.update_last_login(user)
+
+        # Automatically mark the email as verified since they proven ownership
+        if not user.is_email_verified:
+            self.user_repo.mark_email_verified(user)
+
+        # Issue JWT + create session
+        access_token, refresh_token, session_key = self.session_service.create_session(
+            user=user, ip_address=ip, user_agent=user_agent
+        )
+
+        self.audit_service.log_login(
+            user_id=user.id, ip_address=ip, user_agent=user_agent
+        )
+        logger.info("User logged in via OTP: user_id=%s", user.id)
+
+        return {
+            "access": access_token,
+            "refresh": refresh_token,
+            "user": user,
+        }
+
     # ------------------------------------------------------------------
     # Logout
     # ------------------------------------------------------------------
