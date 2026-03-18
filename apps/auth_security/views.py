@@ -72,8 +72,10 @@ class LoginAPIView(APIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        identifier = serializer.validated_data["identifier"]
+
         result = AuthService().login(
-            email=serializer.validated_data["email"],
+            identifier=identifier,
             password=serializer.validated_data["password"],
             ip_address=request.META.get("REMOTE_ADDR"),
             user_agent=request.META.get("HTTP_USER_AGENT")

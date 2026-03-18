@@ -155,7 +155,7 @@ class AuthService:
 
     def login(
         self,
-        email: str,
+        identifier: str,
         password: str,
         ip_address: str | None = None,
         user_agent: str | None = None,
@@ -164,7 +164,7 @@ class AuthService:
         Authenticate a user and issue JWT tokens.
 
         Security rules:
-            - All errors (wrong email, wrong password, inactive, locked) raise the
+            - All errors (wrong email/username, wrong password, inactive, locked) raise the
               SAME generic message to prevent user enumeration.
             - Attempts are always recorded BEFORE credential verification.
 
@@ -178,14 +178,14 @@ class AuthService:
         ip = ip_address or ""
 
         # Look up user (we'll use a generic error in all failure cases)
-        user = self.user_repo.get_by_email(email)
+        user = self.user_repo.get_by_identifier(identifier)
 
         # Check account lock early (before recording attempt, to avoid spam on locked accounts)
         if user:
             lock = self.lock_service.check_lock(user)
             if lock:
                 # Still record the attempt
-                self.lock_service.record_attempt(email, ip, AttemptStatus.FAILED)
+                self.lock_service.record_attempt(identifier, ip, AttemptStatus.FAILED)
                 raise AccountLockedException(
                     f"Your account is temporarily locked. Try again after "
                     f"{lock.locked_until.strftime('%H:%M UTC')}."
@@ -193,21 +193,21 @@ class AuthService:
 
         # Check inactive user
         if user and not user.is_active:
-            self.lock_service.record_attempt(email, ip, AttemptStatus.FAILED)
-            raise InvalidCredentialsException("Invalid email or password.")
+            self.lock_service.record_attempt(identifier, ip, AttemptStatus.FAILED)
+            raise InvalidCredentialsException("Invalid credentials.")
 
         # Validate password (use same error for non-existent user)
         credentials_valid = user is not None and user.check_password(password)
 
         if not credentials_valid:
-            self.lock_service.record_attempt(email, ip, AttemptStatus.FAILED)
+            self.lock_service.record_attempt(identifier, ip, AttemptStatus.FAILED)
             if user:
-                self.lock_service.check_and_lock(user, email, ip)
-            raise InvalidCredentialsException("Invalid email or password.")
+                self.lock_service.check_and_lock(user, identifier, ip)
+            raise InvalidCredentialsException("Invalid credentials.")
 
         # --- Credentials valid from here ---
 
-        self.lock_service.record_attempt(email, ip, AttemptStatus.SUCCESS)
+        self.lock_service.record_attempt(identifier, ip, AttemptStatus.SUCCESS)
         self.user_repo.update_last_login(user)
 
         # Issue JWT + create session

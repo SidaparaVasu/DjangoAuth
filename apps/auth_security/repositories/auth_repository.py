@@ -34,6 +34,17 @@ class AuthUserRepository:
         except AuthUser.DoesNotExist:
             return None
 
+    def get_by_identifier(self, identifier: str) -> AuthUser | None:
+        """Fetch a user by either their email or username."""
+        identifier = identifier.strip()
+        from django.db.models import Q
+        try:
+            return AuthUser.objects.get(
+                Q(email=identifier.lower()) | Q(username=identifier)
+            )
+        except AuthUser.DoesNotExist:
+            return None
+
     def get_by_id(self, user_id: int) -> AuthUser | None:
         try:
             return AuthUser.objects.get(pk=user_id)

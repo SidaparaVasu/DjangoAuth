@@ -67,7 +67,9 @@ class RegisterSerializer(serializers.Serializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    identifier = serializers.CharField(
+        help_text="Login using either email address or username.",
+    )
     password = serializers.CharField(write_only=True)
 
 
