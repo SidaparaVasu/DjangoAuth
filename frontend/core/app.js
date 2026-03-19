@@ -132,6 +132,8 @@ document.addEventListener('alpine:init', () => {
         pwd: { old: '', new: '', confirm: '' },
         forgot: { email: '', step: 1, token: '', new_password: '' },
         verifyEmail: { otp: '' },
+        otpLogin: { identifier: '', otp: '', step: 1 },
+
 
         
         // Data States
@@ -203,6 +205,31 @@ document.addEventListener('alpine:init', () => {
                 this.verifyEmail.otp = '';
             }
         },
+
+        async handleOTPLoginRequest() {
+            const res = await window.API.post('/auth/login/otp/request/', {
+                identifier: this.otpLogin.identifier
+            });
+            if (res.ok) {
+                this.otpLogin.step = 2;
+                alert('Authentication code dispatched! Check your email.');
+            }
+        },
+
+        async handleOTPLoginConfirm() {
+            const res = await window.API.post('/auth/login/otp/confirm/', {
+                identifier: this.otpLogin.identifier,
+                otp_code: this.otpLogin.otp
+            });
+            if (res.ok) {
+                Alpine.store('auth').saveSession(res.data.data);
+                window.location.hash = '#security';
+                // Reset state
+                this.otpLogin = { identifier: '', otp: '', step: 1 };
+                this.subView = 'login';
+            }
+        },
+
 
         async handleRegister() {
             const res = await window.API.post('/auth/register/', this.reg);
