@@ -247,6 +247,23 @@
 
             <!-- View: Security (OTP Playground / Vault) -->
             <div x-show="view === 'security'">
+                <!-- Trust Profile Section -->
+                <div class="card" style="margin-bottom: 2rem; border-left: 4px solid var(--accent-primary)">
+                    <h2 style="margin-bottom: 0.5rem">Identity Trust Profile</h2>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1.5rem">Proof of account ownership and established trust metrics.</p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem">
+                        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px">
+                            <div style="font-size: 0.6rem; color: var(--text-secondary); text-transform: uppercase">Status</div>
+                            <div style="font-weight: 700; color: var(--accent-primary)" x-text="$store.auth.user?.is_email_verified ? 'SECURE / VERIFIED' : 'PENDING VERIFICATION'"></div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px">
+                            <div style="font-size: 0.6rem; color: var(--text-secondary); text-transform: uppercase">Verified At</div>
+                            <div style="font-weight: 700" x-text="$store.auth.user?.email_verified_at ? new Date($store.auth.user.email_verified_at).toLocaleString() : 'N/A'"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-grid">
                     <!-- Password Vault -->
                     <div class="card">
@@ -350,6 +367,30 @@
                                 </template>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Feature Guard (Feature Flags) -->
+                <div class="card" style="margin-top: 2rem">
+                    <h2 style="margin-bottom: 1.5rem">Security Architecture Flags</h2>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1.5rem">Mission-critical feature overrides. Changes take effect immediately across all active instances.</p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem">
+                        <template x-for="flag in featureFlags" :key="flag.feature_key">
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 1.25rem; border-radius: 12px; display: flex; justify-content: space-between; align-items: center">
+                                <div>
+                                    <div style="font-family: var(--font-mono); color: var(--accent-secondary); font-size: 0.9rem" x-text="flag.feature_key"></div>
+                                    <div style="font-size: 0.7rem; color: var(--text-secondary); max-width: 200px" x-text="flag.description"></div>
+                                </div>
+                                <div style="display: flex; gap: 8px; align-items: center">
+                                    <span style="font-size: 0.6rem; font-weight: 800" :style="{ color: flag.is_enabled ? '#00ff88' : '#ff4444' }" x-text="flag.is_enabled ? 'ACTIVE' : 'DISABLED'"></span>
+                                    <div style="width: 44px; height: 22px; background: #222; border-radius: 15px; position: relative; cursor: pointer" @click="handleToggleFlag(flag.feature_key)">
+                                        <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 3px; transition: 0.2s"
+                                             :style="{ left: flag.is_enabled ? '25px' : '3px', background: flag.is_enabled ? '#00ff88' : '#888' }"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </div>

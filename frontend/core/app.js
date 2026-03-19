@@ -139,6 +139,7 @@ document.addEventListener('alpine:init', () => {
         // Data States
         sessions: [],
         configs: [],
+        featureFlags: [],
         auditLogs: [],
         
         init() {
@@ -175,7 +176,10 @@ document.addEventListener('alpine:init', () => {
             
             // Auto-fetch data based on view
             if (view === 'sessions') this.fetchSessions();
-            if (view === 'configs') this.fetchConfigs();
+            if (view === 'configs') {
+                this.fetchConfigs();
+                this.fetchFeatureFlags();
+            }
             if (view === 'audit') this.fetchAuditLogs();
         },
 
@@ -318,6 +322,16 @@ document.addEventListener('alpine:init', () => {
                 config_value: config.config_value
             });
             if (res.ok) alert('System parameter updated.');
+        },
+
+        async fetchFeatureFlags() {
+            const res = await window.API.get('/system/feature-flags/');
+            if (res.ok) this.featureFlags = res.data.data.results || res.data.data;
+        },
+
+        async handleToggleFlag(key) {
+            const res = await window.API.post(`/system/feature-flags/${key}/toggle/`);
+            if (res.ok) this.fetchFeatureFlags();
         },
 
         async fetchAuditLogs() {
