@@ -127,10 +127,12 @@ document.addEventListener('alpine:init', () => {
         
         // Form States
         reg: { email: '', username: '', password: '' },
-        login: { email: '', password: '' },
+        login: { identifier: '', password: '' },
         otp: { purpose: 'LOGIN', code: '' },
         pwd: { old: '', new: '', confirm: '' },
         forgot: { email: '', step: 1, token: '', new_password: '' },
+        verifyEmail: { otp: '' },
+
         
         // Data States
         sessions: [],
@@ -181,6 +183,24 @@ document.addEventListener('alpine:init', () => {
             if (res.ok) {
                 Alpine.store('auth').saveSession(res.data.data);
                 window.location.hash = '#security';
+            } else if (res.status === 403 && res.data.code === 'VERIFICATION_REQUIRED') {
+                // Intercept email verification requirement
+                this.subView = 'verify_email';
+            }
+        },
+
+        async handleVerifyEmailAtLogin() {
+            const res = await window.API.post('/auth/otp/verify/', {
+                email: this.login.identifier, // We assume identifier was email or we fetch from user object if needed
+                otp_code: this.verifyEmail.otp,
+                purpose: 'EMAIL_VERIFICATION'
+            });
+
+            if (res.ok) {
+                alert('Email verified successfully! You can now access the control center.');
+                // Re-attempt login or let user click login again
+                this.subView = 'login';
+                this.verifyEmail.otp = '';
             }
         },
 
@@ -188,7 +208,8 @@ document.addEventListener('alpine:init', () => {
             const res = await window.API.post('/auth/register/', this.reg);
             if (res.ok) {
                 this.subView = 'login';
-                this.login.email = this.reg.email;
+                this.login.identifier = this.reg.email;
+
                 alert('Success! Please log in.');
             }
         },

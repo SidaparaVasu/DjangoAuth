@@ -85,6 +85,10 @@
                                 <span class="status-pill status-offline">UNAUTHENTICATED</span>
                             </template>
                             <span class="badge" x-show="$store.auth.user" x-text="$store.auth.user?.username"></span>
+                            <template x-if="$store.auth.user">
+                                <span class="badge" :style="{ background: $store.auth.user.is_email_verified ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 68, 68, 0.1)', color: $store.auth.user.is_email_verified ? '#00ff88' : '#ff4444' }" 
+                                      x-text="$store.auth.user.is_email_verified ? 'VERIFIED' : 'UNVERIFIED'"></span>
+                            </template>
                         </div>
                         <h1 class="view-title" x-text="view.charAt(0).toUpperCase() + view.slice(1)"></h1>
                     </div>
@@ -127,8 +131,8 @@
                     <!-- Login Form -->
                     <div x-show="subView === 'login'">
                         <div class="form-group">
-                            <label>Email Address</label>
-                            <input type="email" x-model="login.email" placeholder="admin@example.com">
+                            <label>Email or Username</label>
+                            <input type="text" x-model="login.identifier" placeholder="admin@example.com / username">
                         </div>
                         <div class="form-group">
                             <label>Password</label>
@@ -152,6 +156,24 @@
                             <input type="password" x-model="reg.password" placeholder="••••••••">
                         </div>
                         <button class="btn btn-primary" @click="handleRegister()">Establish Identity</button>
+                    </div>
+
+                    <!-- Email Verification at Login -->
+                    <div x-show="subView === 'verify_email'">
+                        <div style="text-align: center; margin-bottom: 2rem">
+                            <div style="font-size: 2.5rem; margin-bottom: 1rem">📧</div>
+                            <h3 style="margin-bottom: 0.5rem">Identity Verification Required</h3>
+                            <p style="font-size: 0.8rem; color: var(--text-secondary)">
+                                This account has not been verified yet. We have sent a code to your registered email address. 
+                                Please enter it below to authorize this session.
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <label>6-Digit Verification Code</label>
+                            <input type="text" x-model="verifyEmail.otp" placeholder="000000" maxlength="6" style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem">
+                        </div>
+                        <button class="btn btn-primary" @click="handleVerifyEmailAtLogin()">Verify & Return to Login</button>
+                        <button class="btn btn-secondary mt-4" @click="subView = 'login'" style="margin-top: 1rem">Back to Login</button>
                     </div>
 
                     <!-- Forgot Password Flow -->
