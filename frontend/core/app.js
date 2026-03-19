@@ -127,14 +127,19 @@ document.addEventListener('alpine:init', () => {
         
         // Form States
         reg: { email: '', username: '', password: '' },
-        login: { email: '', password: '' },
+        login: { identifier: '', password: '' },
         otp: { purpose: 'LOGIN', code: '' },
         pwd: { old: '', new: '', confirm: '' },
         forgot: { email: '', step: 1, token: '', new_password: '' },
+        verifyEmail: { otp: '' },
+        otpLogin: { identifier: '', otp: '', step: 1 },
+
+
         
         // Data States
         sessions: [],
         configs: [],
+        featureFlags: [],
         auditLogs: [],
         
         init() {
@@ -171,7 +176,10 @@ document.addEventListener('alpine:init', () => {
             
             // Auto-fetch data based on view
             if (view === 'sessions') this.fetchSessions();
-            if (view === 'configs') this.fetchConfigs();
+            if (view === 'configs') {
+                this.fetchConfigs();
+                this.fetchFeatureFlags();
+            }
             if (view === 'audit') this.fetchAuditLogs();
         },
 
@@ -181,14 +189,58 @@ document.addEventListener('alpine:init', () => {
             if (res.ok) {
                 Alpine.store('auth').saveSession(res.data.data);
                 window.location.hash = '#security';
+            } else if (res.status === 403 && res.data.code === 'VERIFICATION_REQUIRED') {
+                // Intercept email verification requirement
+                this.subView = 'verify_email';
             }
         },
+
+        async handleVerifyEmailAtLogin() {
+            const res = await window.API.post('/auth/otp/verify/', {
+                email: this.login.identifier, // We assume identifier was email or we fetch from user object if needed
+                otp_code: this.verifyEmail.otp,
+                purpose: 'EMAIL_VERIFICATION'
+            });
+
+            if (res.ok) {
+                alert('Email verified successfully! You can now access the control center.');
+                // Re-attempt login or let user click login again
+                this.subView = 'login';
+                this.verifyEmail.otp = '';
+            }
+        },
+
+        async handleOTPLoginRequest() {
+            const res = await window.API.post('/auth/login/otp/request/', {
+                identifier: this.otpLogin.identifier
+            });
+            if (res.ok) {
+                this.otpLogin.step = 2;
+                alert('Authentication code dispatched! Check your email.');
+            }
+        },
+
+        async handleOTPLoginConfirm() {
+            const res = await window.API.post('/auth/login/otp/confirm/', {
+                identifier: this.otpLogin.identifier,
+                otp_code: this.otpLogin.otp
+            });
+            if (res.ok) {
+                Alpine.store('auth').saveSession(res.data.data);
+                window.location.hash = '#security';
+                // Reset state
+                this.otpLogin = { identifier: '', otp: '', step: 1 };
+                this.subView = 'login';
+            }
+        },
+
 
         async handleRegister() {
             const res = await window.API.post('/auth/register/', this.reg);
             if (res.ok) {
                 this.subView = 'login';
-                this.login.email = this.reg.email;
+                this.login.identifier = this.reg.email;
+
                 alert('Success! Please log in.');
             }
         },
@@ -270,6 +322,16 @@ document.addEventListener('alpine:init', () => {
                 config_value: config.config_value
             });
             if (res.ok) alert('System parameter updated.');
+        },
+
+        async fetchFeatureFlags() {
+            const res = await window.API.get('/system/feature-flags/');
+            if (res.ok) this.featureFlags = res.data.data.results || res.data.data;
+        },
+
+        async handleToggleFlag(key) {
+            const res = await window.API.post(`/system/feature-flags/${key}/toggle/`);
+            if (res.ok) this.fetchFeatureFlags();
         },
 
         async fetchAuditLogs() {
