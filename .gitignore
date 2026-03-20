@@ -17,3 +17,6 @@ skills/*
 
 # Docs
 docs/*
+
+# Logs
+logs/*
