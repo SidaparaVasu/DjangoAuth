@@ -42,3 +42,4 @@ urlpatterns += [
 # Serve static files in development (css, js in frontend dir)
 if settings.DEBUG:
     urlpatterns += static("/ui/", document_root=settings.BASE_DIR / "frontend")
+    urlpatterns += static("/", document_root=settings.BASE_DIR / "frontend")
