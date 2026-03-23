@@ -48,6 +48,22 @@ This project aims to provide a **secure and extensible authentication foundation
 
 ---
 
+## Visual Overview
+
+The application includes a clean, responsive frontend built with **Alpine.js** and **Tailwind CSS**. You can access the UI at: `{{BASE_URL}}/ui/`
+
+### Authentication Flow
+| Login Page | Register Page | OTP Verification |
+| :---: | :---: | :---: |
+| ![Login](/images/1_login.png) | ![Register](/images/2_register.png) | ![OTP](/images/3_otp_input.png) |
+
+### Dashboard & Security
+| Security Vault | System Configurations | Feature Flags |
+| :---: | :---: | :---: |
+| ![Vault](/images/4_security_vault.png) | ![Config](/images/5_system_configurations.png) | ![Flags](/images/6_security_architecture_flags.png) |
+
+---
+
 ## Security Suite
 
 This project goes beyond standard Django authentication. Every security event is tracked and every policy is configurable:
